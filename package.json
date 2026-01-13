@@ -1,0 +1,23 @@
+{
+    "name": "smart-glass-server",
+    "private": true,
+    "version": "0.0.0",
+    "description": "",
+    "main": "src/index.ts",
+    "imports": {
+        "#/*": "./src/*"
+    },
+    "scripts": {
+        "dev": "bun --watch src/index.ts"
+    },
+    "type": "module",
+    "author": "ldanh270",
+    "dependencies": {
+        "dotenv": "^17.2.3",
+        "express": "^5.2.1"
+    },
+    "devDependencies": {
+        "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+        "@types/node": "^25.0.7"
+    }
+}
