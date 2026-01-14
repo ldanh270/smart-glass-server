@@ -1,3 +1,7 @@
+import { PORT } from "#/configs/environments.configs"
+import { HttpStatusCode } from "#/configs/response.configs"
+import translateRoutes from "#/routes/translate.routes"
+
 import dotenv from "dotenv"
 import express, { NextFunction, Request, Response } from "express"
 
@@ -5,7 +9,6 @@ import express, { NextFunction, Request, Response } from "express"
  * Server configurations
  */
 dotenv.config() // Create config for using .env variables
-const PORT = process.env.PORT || 5000 // Port where server runing on
 const app = express()
 
 /**
@@ -18,14 +21,15 @@ app.use(express.json())
  * Main routers
  */
 
-// Public routes
 app.get("/", async (req: Request, res: Response) =>
-    res.status(200).json({ message: "Connect to server successfully" }),
+    res.status(HttpStatusCode.OK).json({ message: "Connect to server successfully" }),
 )
 
-// 404 handler
+app.use("/api/translate", translateRoutes)
+
+// Not-found handler
 app.use((req: Request, res: Response) => {
-    res.status(404).json({
+    res.status(HttpStatusCode.NOT_FOUND).json({
         status: "error",
         message: "Route not found",
     })
