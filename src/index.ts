@@ -1,6 +1,6 @@
-import { PORT } from "#/configs/environments.configs"
-import { HttpStatusCode } from "#/configs/response.configs"
-import translateRoutes from "#/routes/translate.routes"
+import { PORT } from "#/configs/global.config"
+import { HttpStatusCode } from "#/configs/response.config"
+import translateRoutes from "#/routes/translate.route"
 
 import dotenv from "dotenv"
 import express, { NextFunction, Request, Response } from "express"
