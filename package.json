@@ -15,10 +15,12 @@
     "dependencies": {
         "@types/express": "^5.0.6",
         "dotenv": "^17.2.3",
-        "express": "^5.2.1"
+        "express": "^5.2.1",
+        "multer": "^2.0.2"
     },
     "devDependencies": {
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+        "@types/multer": "^2.0.0",
         "@types/node": "^25.0.7"
     }
 }
