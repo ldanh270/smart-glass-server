@@ -1,4 +1,4 @@
-import { ACCESS_PASS } from "#/configs/global.config"
+import { ACCESS_PASS } from "#/configs/env.config"
 import { HttpStatusCode } from "#/configs/response.config"
 
 import { NextFunction, Request, Response } from "express"

@@ -4,11 +4,7 @@ import { Request, Response } from "express"
 
 class TranslateController {
     translateContent = async (req: Request, res: Response) => {
-        let { content } = req.body
-
-        if (!content) content = ""
-
-        await translateService.translateContent(content)
+        const file = req.file
     }
 }
 

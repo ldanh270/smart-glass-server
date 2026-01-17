@@ -1,7 +1,3 @@
-class TranslateService {
-    translateContent = async (content: string) => {
-        return "Abc"
-    }
-}
+class TranslateService {}
 
 export const translateService = new TranslateService()
