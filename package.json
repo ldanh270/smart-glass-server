@@ -18,7 +18,8 @@
         "dotenv": "^17.2.3",
         "express": "^5.2.1",
         "multer": "^2.0.2",
-        "socket.io": "^4.8.3"
+        "socket.io": "^4.8.3",
+        "socket.io-client": "^4.8.3"
     },
     "devDependencies": {
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
