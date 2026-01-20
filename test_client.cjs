@@ -13,21 +13,21 @@ const CHUNK_SIZE = 1024
 const INTERVAL_MS = 50 // Giả lập độ trễ mạng/tốc độ nói
 
 socket.on("connect", () => {
-    console.log("✅ Đã kết nối tới Server:", socket.id)
+    console.log("- Đã kết nối tới Server:", socket.id)
     startStreaming()
 })
 
 socket.on("stt_partial", (data) => {
-    console.log("Partial: " + data.text + "\r")
-    process.stdout.write("Partial: " + data.text + "\r") // In đè dòng
+    console.log(data.text + "\r")
+    process.stdout.write(data.text + "\r")
 })
 
 socket.on("stt_final", (data) => {
-    console.log("\n🚀 FINAL:", data.text)
+    console.log(data.text)
 })
 
 socket.on("stt_error", (err) => {
-    console.error("❌ Lỗi từ Server:", err)
+    console.error("- Lỗi từ Server:", err)
 })
 
 socket.on("disconnect", () => {
@@ -35,7 +35,7 @@ socket.on("disconnect", () => {
 })
 
 function startStreaming() {
-    console.log("🎧 Bắt đầu stream file:", FILE_PATH)
+    console.log("- Bắt đầu stream file:", FILE_PATH)
 
     if (!fs.existsSync(FILE_PATH)) {
         console.error("Không tìm thấy file .pcm! Hãy chạy ffmpeg trước.")
@@ -48,7 +48,7 @@ function startStreaming() {
     const intervalId = setInterval(() => {
         if (offset >= fileBuffer.length) {
             clearInterval(intervalId)
-            console.log("\n✅ Đã gửi hết file.")
+            console.log("\n- Đã gửi hết file.")
             // Giữ kết nối thêm 1 chút để nhận kết quả cuối rồi đóng
             setTimeout(() => socket.disconnect(), 1000)
             return

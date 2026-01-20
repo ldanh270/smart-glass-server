@@ -44,7 +44,7 @@ io.on("connection", (socket) => {
     console.log("Socket connected: ", socket.id)
 
     // Sockets
-    translateController.translateContent(socket)
+    translateController.translate(socket)
 
     // SOCKET HERE
 
