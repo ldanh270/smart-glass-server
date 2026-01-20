@@ -1,88 +1,48 @@
-import { STT_API_KEY } from "#/configs/env.config"
+import { TRANSLATE_API_KEY, TRANSLATE_API_URL, TRANSLATE_MODEL } from "#/configs/env.config"
 
-import { Cheetah } from "@picovoice/cheetah-node"
+import axios from "axios"
 
-export class TranslateService {
-    private cheetah: Cheetah | null = null
-    private frameAccumulator: number[] = []
-
+class TranslateService {
     /**
-     * Set up 3rd STT service for processing
+     * Translate original text to target language (Default Vietnamese)
+     * @param text Original text
+     * @param targetLang Target language
      */
-    constructor() {
+    async translate(text: string, targetLang: string = "Vietnamese"): Promise<string> {
+        if (!text || text.trim().length === 0) return ""
+
         try {
-            this.cheetah = new Cheetah(STT_API_KEY)
+            const response = await axios.post(
+                TRANSLATE_API_URL,
+                {
+                    model: TRANSLATE_MODEL,
+                    messages: [
+                        {
+                            role: "system",
+                            content: `Translate users input to ${targetLang}. Return ONLY the translated text.`,
+                        },
+                        {
+                            role: "user",
+                            content: text,
+                        },
+                    ],
+                    temperature: 0.1, // Keep low temperature for more extractly result (0 < temperature < 2)
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${TRANSLATE_API_KEY}`,
+                        "Content-Type": "application/json",
+                    },
+                },
+            )
+
+            const translatedText = response.data.choices[0]?.message?.content || ""
+            return translatedText.trim()
         } catch (error) {
-            console.error("TranslateService - translateContent ERROR: " + (error as Error).message)
-            throw new Error("Failed to initialize STT Engine")
-        }
-    }
-
-    /**
-     *
-     * @param audioBuffer Binary audio (8-bit) for convert to text
-     * @returns
-     * - transcript: Newest text translated by the newest sound chunk (Not sentence)
-     * - isEndpoint: Check if user stopped speaking or finished sentence
-     *      + true: User stopped speaking/finished sentence
-     *      + false: The user still speaking or hasn't finished sentence
-     */
-    processAudio = (audioBuffer: Buffer) => {
-        if (!this.cheetah) throw new Error("STT Service destroyed")
-
-        // Convert buffer NodeJS (8-bit) to PCM format (16-bit)
-        const audioFrame = new Int16Array(
-            audioBuffer.buffer,
-            audioBuffer.byteOffset,
-            audioBuffer.byteLength / 2,
-        )
-
-        this.frameAccumulator.push(...audioFrame)
-
-        let transcript = ""
-        let isEndpoint = false
-        const frameLength = this.cheetah.frameLength // Default is 512 samples
-
-        // Loop to check enough frame length to process
-        while (this.frameAccumulator.length >= frameLength) {
-            // Get extract frame length to process
-            const frameToProcess = new Int16Array(this.frameAccumulator.slice(0, frameLength))
-
-            // Remove processed frame from accumulator
-            this.frameAccumulator = this.frameAccumulator.slice(frameLength)
-
-            // Process using Cheetah (Extract frameLength samples)
-            const result = this.cheetah.process(frameToProcess)
-
-            // Accumulate the results
-            transcript += result[0]
-            if (result[1]) isEndpoint = true
-        }
-
-        return { transcript, isEndpoint }
-    }
-
-    /**
-     * Retrieve remaining text from buffer
-     * - Use at the end of sentence
-     * - To retrieve the last text from buffer
-     */
-    flush = () => {
-        if (!this.cheetah) return ""
-        this.frameAccumulator = []
-        return this.cheetah.flush()
-    }
-
-    /**
-     * Release resources
-     * - Cleanup function
-     * - To avoid stackoverflow & out of memory
-     */
-    release = () => {
-        if (this.cheetah) {
-            this.cheetah.release()
-            this.cheetah = null
-            this.frameAccumulator = []
+            console.error("TranslateService - translate ERROR:", (error as Error).message)
+            return text
         }
     }
 }
+
+export const translateService = new TranslateService()

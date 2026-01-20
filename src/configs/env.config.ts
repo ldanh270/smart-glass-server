@@ -6,7 +6,10 @@ export const PORT = process.env.PORT || 5000 // Port where server runing on
 
 export const ACCESS_PASS = process.env.PASS // Password to access to server materials
 
-// API keys
-export const TRANSLATE_API_KEY = process.env.PERPLEXITY_API_KEY // AI API to translate with context
+// STT
+export const STT_API_KEY = process.env.PICO_VOICE_API_KEY
 
-export const STT_API_KEY = process.env.PICO_VOICE_API_KEY // API to convert speech to text
+// Translate
+export const TRANSLATE_API_URL = process.env.GROQ_API_URL
+export const TRANSLATE_MODEL = process.env.TRANSLATE_MODEL
+export const TRANSLATE_API_KEY = process.env.GROQ_API_KEY
