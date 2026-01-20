@@ -19,7 +19,6 @@ socket.on("connect", () => {
 
 socket.on("stt_partial", (data) => {
     console.log(data.text + "\r")
-    process.stdout.write(data.text + "\r")
 })
 
 socket.on("stt_final", (data) => {
