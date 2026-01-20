@@ -3,7 +3,9 @@ import { STT_API_KEY } from "#/configs/env.config"
 import { Cheetah } from "@picovoice/cheetah-node"
 
 export class SttService {
+    // Model for handle Speech To Text
     private cheetah: Cheetah | null = null
+    // Frame accumulator for syncro
     private frameAccumulator: number[] = []
 
     /**

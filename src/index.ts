@@ -38,15 +38,11 @@ app.get("/", (req: Request, res: Response) => {
     res.status(HttpStatusCode.OK).json({ message: "Connect to server successfully" })
 })
 
-// ROUTES HERE
-
 io.on("connection", (socket) => {
     console.log("Socket connected: ", socket.id)
 
     // Sockets
     translateController.translate(socket)
-
-    // SOCKET HERE
 
     socket.on("disconnect", () => {
         console.log("Socket disconnected: ", socket.id)
