@@ -8,24 +8,26 @@
         "#/*": "./src/*"
     },
     "scripts": {
-        "dev": "bun --watch src/index.ts"
+        "dev": "bun --watch src/index.ts",
+        "test": "node ./test_client.cjs"
     },
     "type": "module",
     "author": "ldanh270",
     "dependencies": {
         "@google-cloud/speech": "^7.2.1",
         "@picovoice/cheetah-node": "^3.0.0",
-        "axios": "^1.13.2",
+        "axios": "^1.13.4",
         "dotenv": "^17.2.3",
         "express": "^5.2.1",
         "multer": "^2.0.2",
         "socket.io": "^4.8.3",
-        "socket.io-client": "^4.8.3"
+        "socket.io-client": "^4.8.3",
+        "ws": "^8.19.0"
     },
     "devDependencies": {
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
         "@types/multer": "^2.0.0",
-        "@types/node": "^25.0.7",
+        "@types/node": "^25.1.0",
         "@types/ws": "^8.18.1"
     }
 }

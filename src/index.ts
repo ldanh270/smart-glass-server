@@ -1,55 +1,53 @@
-import { CLIENT_URL, PORT } from "#/configs/env.config"
+import { PORT } from "#/configs/env.config"
 import { HttpStatusCode } from "#/configs/response.config"
 import { translateController } from "#/controllers/translate.controller"
 
 import dotenv from "dotenv"
 import express, { Request, Response } from "express"
 import http from "http"
-import { Server } from "socket.io"
+import { WebSocket, WebSocketServer } from "ws"
 
 dotenv.config()
 
 /**
  * Initial configs
  */
-// Create expres app
 const app = express()
-
-// Create HTTP server from express app
 const httpServer = http.createServer(app)
 
-// Create socket
-const io = new Server(httpServer, {
-    cors: {
-        origin: CLIENT_URL,
-        credentials: true,
-    },
-})
-
 /**
- * Middleware & Routes & Sockets
+ * Middleware & Routes
  */
-
-// Middleware
 app.use(express.json())
 
-// Routes
 app.get("/", (req: Request, res: Response) => {
     res.status(HttpStatusCode.OK).json({ message: "Connect to server successfully" })
 })
 
-io.on("connection", (socket) => {
-    console.log("Socket connected: ", socket.id)
+/**
+ * WebSocket server
+ */
+const wss = new WebSocketServer({ server: httpServer, path: "/ws" })
 
-    // Sockets
-    translateController.translate(socket)
+wss.on("connection", (ws) => {
+    console.log("WS connected")
 
-    socket.on("disconnect", () => {
-        console.log("Socket disconnected: ", socket.id)
+    // WS controllers
+    translateController.translate(ws)
+
+    ws.on("close", () => {
+        console.log("WS disconnected")
+    })
+
+    ws.on("error", (err) => {
+        console.error("WS error:", err)
     })
 })
 
-// Start Server
+/**
+ * Start Server
+ */
 httpServer.listen(PORT, () => {
     console.log(`Server running on PORT: ${PORT}`)
+    console.log(`WS endpoint: ws://localhost:${PORT}/ws`)
 })

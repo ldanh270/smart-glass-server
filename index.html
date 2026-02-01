@@ -1,0 +1,507 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Smart Glass - Audio Test</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                max-width: 800px;
+                margin: 40px auto;
+                padding: 20px;
+                background: #1a1a2e;
+                color: #eee;
+            }
+
+            h1 {
+                color: #00d4ff;
+            }
+
+            .controls {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                align-items: center;
+            }
+
+            button {
+                padding: 12px 24px;
+                font-size: 16px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            #connect {
+                background: #4ade80;
+                color: #1a1a2e;
+            }
+
+            #connect:hover {
+                filter: brightness(0.95);
+            }
+
+            #connect.connected {
+                background: #ef4444;
+                color: #fff;
+            }
+
+            #record {
+                background: #3b82f6;
+                color: white;
+            }
+
+            #record:hover {
+                filter: brightness(0.95);
+            }
+
+            #record.recording {
+                background: #ef4444;
+                animation: pulse 1s infinite;
+            }
+
+            #record:disabled {
+                background: #666;
+                cursor: not-allowed;
+            }
+
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.6;
+                }
+            }
+
+            .status {
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 4px;
+                font-size: 14px;
+                margin-left: 10px;
+            }
+
+            .status.connected {
+                background: #22c55e;
+                color: white;
+            }
+
+            .status.disconnected {
+                background: #ef4444;
+                color: white;
+            }
+
+            .status.recording {
+                background: #f59e0b;
+                color: white;
+            }
+
+            #log {
+                background: #16213e;
+                padding: 20px;
+                border-radius: 12px;
+                font-family: "JetBrains Mono", "Fira Code", monospace;
+                font-size: 14px;
+                line-height: 1.6;
+                max-height: 400px;
+                overflow-y: auto;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+
+            .result-section {
+                margin-top: 20px;
+            }
+
+            .result-section h3 {
+                color: #00d4ff;
+                margin-bottom: 10px;
+            }
+
+            #sttResult {
+                background: #0f3460;
+                padding: 20px;
+                border-radius: 12px;
+                min-height: 60px;
+                font-size: 18px;
+                line-height: 1.8;
+            }
+
+            .partial {
+                color: #94a3b8;
+                font-style: italic;
+            }
+
+            .final {
+                color: #4ade80;
+                font-weight: 500;
+            }
+
+            .info {
+                font-size: 12px;
+                color: #9aa4b2;
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1>🎤 Smart Glass - Audio Test</h1>
+
+        <div class="controls">
+            <button id="connect">🔌 Kết nối</button>
+            <button id="record" disabled>🎙️ Giữ để nói</button>
+            <span id="statusBadge" class="status disconnected">Chưa kết nối</span>
+        </div>
+
+        <div class="result-section">
+            <h3>📝 Kết quả nhận dạng</h3>
+            <div id="sttResult">Chưa có kết quả...</div>
+        </div>
+
+        <div class="result-section">
+            <h3>📋 Log</h3>
+            <pre id="log"></pre>
+        </div>
+
+        <p class="info">💡 Nhấn "Kết nối" rồi giữ nút "Giữ để nói" để ghi âm. Thả ra để dừng.</p>
+
+        <script>
+            // ========================
+            // CONFIG
+            // ========================
+            const PORT = 5000
+            const WS_URL = `ws://localhost:${PORT}/ws`
+
+            // Match Picovoice Cheetah default frameLength (usually 512)
+            // We'll send exactly 512 samples per chunk (16-bit mono PCM)
+            const TARGET_SAMPLE_RATE = 16000
+            const TARGET_FRAME_SAMPLES = 512 // samples
+            const TARGET_FRAME_BYTES = TARGET_FRAME_SAMPLES * 2 // Int16 = 2 bytes
+
+            // ========================
+            // STATE
+            // ========================
+            let ws = null
+            let isRecording = false
+            let audioContext = null
+            let source = null
+            let stream = null
+            let workletNode = null
+            let zeroGain = null
+
+            const connectBtn = document.getElementById("connect")
+            const recordBtn = document.getElementById("record")
+            const statusBadge = document.getElementById("statusBadge")
+            const logEl = document.getElementById("log")
+            const sttResult = document.getElementById("sttResult")
+
+            // ========================
+            // LOGGING
+            // ========================
+            function log(message) {
+                const timestamp = new Date().toLocaleTimeString()
+                logEl.textContent += `[${timestamp}] ${message}\n`
+                logEl.scrollTop = logEl.scrollHeight
+            }
+
+            function updateStatus(status) {
+                statusBadge.className = "status " + status
+                const statusText = {
+                    connected: "✅ Đã kết nối",
+                    disconnected: "❌ Chưa kết nối",
+                    recording: "🔴 Đang ghi âm",
+                }
+                statusBadge.textContent = statusText[status] || status
+            }
+
+            // ========================
+            // WEBSOCKET CONNECTION
+            // ========================
+            connectBtn.onclick = () => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.close()
+                    return
+                }
+
+                log(`🔌 Đang kết nối tới: ${WS_URL}`)
+                ws = new WebSocket(WS_URL)
+
+                ws.onopen = () => {
+                    log("✅ Đã kết nối tới Server")
+                    updateStatus("connected")
+                    connectBtn.textContent = "🔌 Ngắt kết nối"
+                    connectBtn.classList.add("connected")
+                    recordBtn.disabled = false
+                }
+
+                ws.onmessage = (event) => {
+                    // server sends JSON strings, not blobs (in your backend)
+                    try {
+                        const msg = JSON.parse(event.data)
+                        const { type, payload } = msg
+
+                        switch (type) {
+                            case "chunk_received":
+                                // optional: log once per second if you want
+                                break
+
+                            case "stt_partial":
+                                sttResult.innerHTML = `<span class="partial">${payload?.text || ""}</span>`
+                                log(`📝 [Partial] ${payload?.text || ""}`)
+                                break
+
+                            case "stt_flush":
+                                sttResult.innerHTML = `<span class="final">${payload?.text || ""}</span>`
+                                log(`✅ [Final] ${payload?.text || ""}`)
+                                break
+
+                            case "stt_error":
+                                log(`❌ [Error] ${JSON.stringify(payload)}`)
+                                break
+
+                            default:
+                                log(`📨 [${type}] ${JSON.stringify(payload)}`)
+                        }
+                    } catch (e) {
+                        log(`📨 Text: ${event.data}`)
+                    }
+                }
+
+                ws.onclose = (e) => {
+                    log(`❌ Đã ngắt kết nối: ${e.code}`)
+                    updateStatus("disconnected")
+                    connectBtn.textContent = "🔌 Kết nối"
+                    connectBtn.classList.remove("connected")
+                    recordBtn.disabled = true
+                    stopRecording()
+                }
+
+                ws.onerror = () => {
+                    log("🔥 Lỗi WebSocket")
+                }
+            }
+
+            // ========================
+            // AUDIO WORKLET (Resample -> Int16 -> Chunk=512 -> postMessage)
+            // ========================
+            const WORKLET_CODE = `
+            class ResampleChunkPCM16 extends AudioWorkletProcessor {
+                constructor(options) {
+                    super();
+                    const opts = (options && options.processorOptions) || {};
+                    this.targetSampleRate = opts.targetSampleRate || 16000;
+                    this.frameSamples = opts.frameSamples || 512;
+
+                    this.sourceSampleRate = sampleRate; // AudioContext's actual sampleRate
+                    this.ratio = this.sourceSampleRate / this.targetSampleRate;
+
+                    this._resamplePos = 0;
+                    this._chunkBuffer = new Int16Array(this.frameSamples);
+                    this._chunkOffset = 0;
+                }
+
+                _floatToInt16(s) {
+                    if (s > 1) s = 1;
+                    else if (s < -1) s = -1;
+                    return s < 0 ? (s * 0x8000) : (s * 0x7fff);
+                }
+
+                // Linear interpolate sampling from input at this.ratio step
+                _pushResampledFrom(input) {
+                    // If source==target, ratio=1 -> just push sequentially
+                    if (this.ratio === 1) {
+                        for (let i = 0; i < input.length; i++) {
+                            this._pushSample(input[i]);
+                        }
+                        return;
+                    }
+
+                    let pos = this._resamplePos;
+
+                    while (pos < input.length - 1) {
+                        const idx = Math.floor(pos);
+                        const frac = pos - idx;
+                        const s0 = input[idx];
+                        const s1 = input[idx + 1];
+                        const sample = s0 + (s1 - s0) * frac;
+
+                        this._pushSample(sample);
+                        pos += this.ratio;
+                    }
+
+                    // carry position to next block
+                    this._resamplePos = pos - input.length;
+                    if (this._resamplePos < 0) this._resamplePos = 0;
+                }
+
+                _pushSample(floatSample) {
+                    const int16 = this._floatToInt16(floatSample);
+                    this._chunkBuffer[this._chunkOffset++] = int16;
+
+                    if (this._chunkOffset >= this.frameSamples) {
+                        // Transfer a copy buffer (so we can reuse chunkBuffer)
+                        const out = new Int16Array(this._chunkBuffer);
+                        this.port.postMessage(out.buffer, [out.buffer]);
+                        this._chunkOffset = 0;
+                    }
+                }
+
+                process(inputs) {
+                    const input = inputs[0];
+                    if (!input || !input[0]) return true;
+
+                    const ch0 = input[0]; // mono
+                    if (!ch0 || ch0.length === 0) return true;
+
+                    this._pushResampledFrom(ch0);
+                    return true;
+                }
+            }
+
+            registerProcessor("resample-chunk-pcm16", ResampleChunkPCM16);
+            `
+
+            // ========================
+            // AUDIO RECORDING
+            // ========================
+            async function startRecording() {
+                if (isRecording) return
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    log("⚠️ Chưa kết nối WS")
+                    return
+                }
+
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            channelCount: 1,
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                        },
+                    })
+
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+
+                    // Load worklet
+                    const blob = new Blob([WORKLET_CODE], { type: "application/javascript" })
+                    const url = URL.createObjectURL(blob)
+                    await audioContext.audioWorklet.addModule(url)
+                    URL.revokeObjectURL(url)
+
+                    source = audioContext.createMediaStreamSource(stream)
+
+                    workletNode = new AudioWorkletNode(audioContext, "resample-chunk-pcm16", {
+                        numberOfInputs: 1,
+                        numberOfOutputs: 1,
+                        outputChannelCount: [1],
+                        processorOptions: {
+                            targetSampleRate: TARGET_SAMPLE_RATE,
+                            frameSamples: TARGET_FRAME_SAMPLES,
+                        },
+                    })
+
+                    // Receive Int16 PCM frames (512 samples) and send binary
+                    workletNode.port.onmessage = (event) => {
+                        if (!isRecording) return
+                        if (!ws || ws.readyState !== WebSocket.OPEN) return
+
+                        const arrayBuffer = event.data // ArrayBuffer
+                        // sanity check (optional)
+                        // if (arrayBuffer.byteLength !== TARGET_FRAME_BYTES) return;
+
+                        ws.send(arrayBuffer)
+                    }
+
+                    // Keep node alive but mute output
+                    zeroGain = audioContext.createGain()
+                    zeroGain.gain.value = 0
+
+                    source.connect(workletNode)
+                    workletNode.connect(zeroGain)
+                    zeroGain.connect(audioContext.destination)
+
+                    isRecording = true
+                    updateStatus("recording")
+                    recordBtn.classList.add("recording")
+                    recordBtn.textContent = "🔴 Đang ghi..."
+                    log(
+                        `🎙️ Bắt đầu ghi âm (AudioWorklet) | ctxSR=${audioContext.sampleRate} -> targetSR=${TARGET_SAMPLE_RATE}, frame=${TARGET_FRAME_SAMPLES}`,
+                    )
+                } catch (err) {
+                    log(`❌ Lỗi truy cập microphone: ${err?.message || err}`)
+                }
+            }
+
+            function stopRecording() {
+                if (!isRecording) return
+
+                isRecording = false
+
+                try {
+                    if (workletNode) {
+                        workletNode.port.onmessage = null
+                        workletNode.disconnect()
+                        workletNode = null
+                    }
+
+                    if (zeroGain) {
+                        zeroGain.disconnect()
+                        zeroGain = null
+                    }
+
+                    if (source) {
+                        source.disconnect()
+                        source = null
+                    }
+
+                    if (audioContext) {
+                        audioContext.close()
+                        audioContext = null
+                    }
+
+                    if (stream) {
+                        stream.getTracks().forEach((track) => track.stop())
+                        stream = null
+                    }
+                } catch (e) {
+                    // ignore cleanup errors
+                }
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    updateStatus("connected")
+                } else {
+                    updateStatus("disconnected")
+                }
+
+                recordBtn.classList.remove("recording")
+                recordBtn.textContent = "🎙️ Giữ để nói"
+                log("⏹️ Dừng ghi âm")
+            }
+
+            // Mouse events
+            recordBtn.onmousedown = (e) => {
+                e.preventDefault()
+                startRecording()
+            }
+            recordBtn.onmouseup = stopRecording
+            recordBtn.onmouseleave = stopRecording
+
+            // Touch events
+            recordBtn.ontouchstart = (e) => {
+                e.preventDefault()
+                startRecording()
+            }
+            recordBtn.ontouchend = stopRecording
+            recordBtn.ontouchcancel = stopRecording
+
+            // Cleanup
+            window.onbeforeunload = () => {
+                stopRecording()
+                if (ws) ws.close()
+            }
+        </script>
+    </body>
+</html>
