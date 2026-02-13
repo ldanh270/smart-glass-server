@@ -1,45 +1,53 @@
+import { PORT } from "#/configs/env.config"
+import { HttpStatusCode } from "#/configs/response.config"
+import { translateController } from "#/controllers/translate.controller"
+
 import dotenv from "dotenv"
-import express, { NextFunction, Request, Response } from "express"
+import express, { Request, Response } from "express"
+import http from "http"
+import { WebSocket, WebSocketServer } from "ws"
+
+dotenv.config()
 
 /**
- * Server configurations
+ * Initial configs
  */
-dotenv.config() // Create config for using .env variables
-const PORT = process.env.PORT || 5000 // Port where server runing on
 const app = express()
+const httpServer = http.createServer(app)
 
 /**
- * Middleware
+ * Middleware & Routes
  */
-
 app.use(express.json())
 
+app.get("/", (req: Request, res: Response) => {
+    res.status(HttpStatusCode.OK).json({ message: "Connect to server successfully" })
+})
+
 /**
- * Main routers
+ * WebSocket server
  */
+const wss = new WebSocketServer({ server: httpServer, path: "/ws" })
 
-// Public routes
-app.get("/", async (req: Request, res: Response) =>
-    res.status(200).json({ message: "Connect to server successfully" }),
-)
+wss.on("connection", (ws) => {
+    console.log("WS connected")
 
-// 404 handler
-app.use((req: Request, res: Response) => {
-    res.status(404).json({
-        status: "error",
-        message: "Route not found",
+    // WS controllers
+    translateController.translate(ws)
+
+    ws.on("close", () => {
+        console.log("WS disconnected")
+    })
+
+    ws.on("error", (err) => {
+        console.error("WS error:", err)
     })
 })
 
-// Global error
-app.use((err: any, req: Request, res: Response) => {
-    console.error("GLOBAL ERROR:", err)
-    res.status(500).send("Internal Server Error")
-})
-
 /**
- * Server listening on PORT
+ * Start Server
  */
-app.listen(PORT, () => {
-    console.log("Server start on port " + PORT)
+httpServer.listen(PORT, () => {
+    console.log(`Server running on PORT: ${PORT}`)
+    console.log(`WS endpoint: ws://localhost:${PORT}/ws`)
 })
