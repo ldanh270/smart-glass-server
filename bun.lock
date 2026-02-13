@@ -3,21 +3,22 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@google-cloud/speech": "latest",
-        "@picovoice/cheetah-node": "latest",
-        "axios": "latest",
-        "dotenv": "latest",
-        "express": "latest",
-        "multer": "latest",
-        "socket.io": "latest",
-        "socket.io-client": "latest",
-        "ws": "latest",
+        "@google-cloud/speech": "^7.2.1",
+        "@picovoice/cheetah-node": "^3.0.0",
+        "axios": "^1.13.4",
+        "dotenv": "^17.2.3",
+        "express": "^5.2.1",
+        "multer": "^2.0.2",
+        "socket.io": "^4.8.3",
+        "socket.io-client": "^4.8.3",
+        "ws": "^8.19.0",
       },
       "devDependencies": {
-        "@trivago/prettier-plugin-sort-imports": "latest",
-        "@types/multer": "latest",
-        "@types/node": "latest",
-        "@types/ws": "latest",
+        "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+        "@types/multer": "^2.0.0",
+        "@types/node": "^25.1.0",
+        "@types/ws": "^8.18.1",
+        "typescript": "^5.0.0",
       },
     },
   },
@@ -467,6 +468,8 @@
     "type-is": ["type-is@2.0.1", "", { "dependencies": { "content-type": "^1.0.5", "media-typer": "^1.1.0", "mime-types": "^3.0.0" } }, "sha512-OZs6gsjF4vMp32qrCbiVSkrFmXtG/AZhY3t0iAMrMBiAZyV9oALtXO8hsrHbMXF9x6L3grlFuwW2oAz7cav+Gw=="],
 
     "typedarray": ["typedarray@0.0.6", "", {}, "sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA=="],
+
+    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 

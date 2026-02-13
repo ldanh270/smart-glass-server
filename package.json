@@ -9,7 +9,7 @@
     },
     "scripts": {
         "dev": "bun --watch src/index.ts",
-        "test": "node ./test_client.cjs"
+        "start": "bun src/index.ts"
     },
     "type": "module",
     "author": "ldanh270",
@@ -28,6 +28,7 @@
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
         "@types/multer": "^2.0.0",
         "@types/node": "^25.1.0",
-        "@types/ws": "^8.18.1"
+        "@types/ws": "^8.18.1",
+        "typescript": "^5.0.0"
     }
 }
